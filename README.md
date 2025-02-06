@@ -18,7 +18,8 @@ srun --export=ALL python3 /home/hice1/[your info]/fl-repo/main.py --seed=1 --par
 
 In the above example, ```--sample_ratio``` is the percentage of clients sampled each round. ```--n_rounds``` is the number of total communication rounds.
 ```--n_clients``` is the total number of clients created. 
-You can control the exact algorithm you are running by changing the ```--config_path```.
+You can control the exact algorithm you are running by changing the ```--config_path```. I normally run ``fedavg``, ``fedprox``,
+``fedcurv``, ``fedntd``, and ``moon``.
 
 In federated learning, we also simulate label heterogeneity experiments, where we
 purposefully make the clients have different label distributions.
