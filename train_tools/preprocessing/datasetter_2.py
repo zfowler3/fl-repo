@@ -70,11 +70,11 @@ def data_distributer(
     num_classes = len(np.unique(all_targets))
     print('Class count: ', num_classes)
     
-    # ask Zoe :
     net_dataidx_map_test = None
     
-    # initialize up local_loaders dictionary
-    # at each round, there is a different noise type (& parameters)
+    # initialize local_loaders dictionary
+    # at each round, there is a different noise type added (& parameters)
+    # noise is additive
     # no noise added at round 0
     
     # random noise is added
@@ -90,6 +90,7 @@ def data_distributer(
     # local_loaders = {client_index : {round_number: {data, ... noise} } }
     
     # creates the dictionary mapping client index to which specific images (by index) they get
+    # for iid only right now
     if partition.method == "iid":
         net_dataidx_map = iid_partition(all_targets, n_clients)
     else:
@@ -116,33 +117,22 @@ def data_distributer(
             continue
         else:
             noise_type, parameters = get_noise_function() # randomize noise type and parameters
+            prev_dataset = local_loaders[client_idx][k-1]["train"] # initialize to previous round's dataset
             local_loaders[client_idx][k]["noise"] = noise_type
             local_loaders[client_idx][k]["parameters"] = parameters
-            local_loaders[client_idx][k]["train"] = apply_noise(noise_type, parameters, img_size=(32,32)) # apply noise to images in dataset
+            local_loaders[client_idx][k]["train"] = apply_noise(prev_dataset, noise_type, parameters, img_size=(32,32))
+            # apply noise to images in previous round's dataset and set that as current dataset
     
     
     ## test data            
     if net_dataidx_map_test is not None:
         print(">>> Distributing client test data...")
         for client_idx, dataidxs in net_dataidx_map_test.items():
-            # Note: Must train mode if not wanting to use train set (here: local client test set is made from local client data)
-            if dataset_name == 'CIFAR-10-C':
-                all_test = []
-                for j in range(len(dataidxs)):
-                    cur_visit_idxs = dataidxs[j]
-                    local_loaders[client_idx][j]["test_size"] = len(cur_visit_idxs)
-                    local_loaders[client_idx][j]["test"] = DATA_LOADERS[dataset_name](
-                        root, mode='tr', batch_size=batch_size, dataidxs=cur_visit_idxs, dataset_label=dataset_name,
-                        shift_type=shift_type
-                    )
-                    all_test.append(local_loaders[client_idx][j]["test"])
-                local_loaders[client_idx]["all_test"] = all_test
-            else:
-                local_testloader = DATA_LOADERS[dataset_name](
-                    root, mode='tr', batch_size=batch_size, dataidxs=dataidxs, dataset_label=dataset_name
-                )
-                local_loaders[client_idx]["test"] = local_testloader
-                local_loaders[client_idx]["test_size"] = len(dataidxs)
+            local_testloader = DATA_LOADERS[dataset_name](
+                root, mode='tr', batch_size=batch_size, dataidxs=dataidxs, dataset_label=dataset_name
+            )
+            local_loaders[client_idx][0]["test"] = local_testloader
+            local_loaders[client_idx][0]["test_size"] = len(dataidxs)
     
 ###
 
@@ -174,8 +164,9 @@ def get_noise_function():
 ## skimage.util.random_noise(image, mode='gaussian', rng=None, clip=True, **kwargs)[source]
 # modes: gaussian’, ‘poisson’ ‘s&p’, ‘speckle’
 # is data a list of indexes
-def apply_noise(client_idx, local_loaders, img_size):
-    clean_data = local_loaders[client_idx][0]["train"]
+def apply_noise(dataset, noise_type, parameters, img_size):
+    # dataset is a torch 
+    # clean_data = dataset
     noisy_data = []
     if noise_type == "gaussian":
         for image in clean_data:
