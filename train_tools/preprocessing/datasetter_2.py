@@ -165,7 +165,8 @@ def get_noise_function():
 # modes: gaussian’, ‘poisson’ ‘s&p’, ‘speckle’
 # is data a list of indexes
 def apply_noise(dataset, noise_type, parameters, img_size):
-    # dataset is a torch 
+    # dataset is a torch map-style dataset
+    # does it include targets? do i need to extract that?
     # clean_data = dataset
     noisy_data = []
     if noise_type == "gaussian":
