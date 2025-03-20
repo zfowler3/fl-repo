@@ -10,7 +10,7 @@ from .mnist.loader import get_all_targets_mnist, get_dataloader_mnist
 from .cifar10.loader import get_all_targets_cifar10, get_dataloader_cifar10
 from .cifar100.loader import get_all_targets_cifar100, get_dataloader_cifar100
 from .cinic10.loader import get_all_targets_cinic10, get_dataloader_cinic10
-from .olives.loader import get_patient_ids_by_visit, get_all_targets_olives
+from .olives.loader import get_patient_ids_by_visit, get_all_targets_olives, get_dataloader_olives
 from .tinyimagenet.loader import (
     get_all_targets_tinyimagenet,
     get_dataloader_tinyimagenet,
@@ -47,7 +47,8 @@ DATA_LOADERS = {
     "OCTMNIST": get_dataloader_medmnist,
     "TissueMNIST": get_dataloader_medmnist,
     "CIFAR-10-C": get_dataloader_cifar10c,
-    "fashion": get_dataloader_fashion
+    "fashion": get_dataloader_fashion,
+    "olives": get_dataloader_olives
 }
 
 
@@ -100,12 +101,19 @@ def data_distributer(
             local_loaders[j]["all_test"] = None
 
 
-    if dataset_name == 'CIFAR-10-C':
-        net_dataidx_map = data_distribution_cifar10c(all_targets, n_clients, partition.alpha, num_classes, partition.method)
-        # create local test set FROM net_dataidx_map
-        net_dataidx_map_test, net_dataidx_map = local_data_distribution_shift(idxs=net_dataidx_map,
-                                                                              all_targets=all_targets,
-                                                                              save_folder=save_folder)
+    if args.continual:
+        # cifar10/cifar100 added noise experiments have different setup than medical experiments, where each client == 1 patient in medical
+        if dataset_name == 'CIFAR-10-C':
+            net_dataidx_map = data_distribution_cifar10c(all_targets, n_clients, partition.alpha, num_classes, partition.method)
+            # create local test set FROM net_dataidx_map
+            net_dataidx_map_test, net_dataidx_map = local_data_distribution_shift(idxs=net_dataidx_map,
+                                                                                  all_targets=all_targets,
+                                                                                  save_folder=save_folder)
+        else:
+            # Medical Data Partition for Continual Setup
+            net_dataidx_map = patient_partition_continual(root, n_clients, dataset_name, levels)
+            #'Amount' determines amount of local test samples allotted to each 'patient'
+            net_dataidx_map_test, net_dataidx_map = create_local_patients_continual(net_dataidx_map, amount=10)
     else:
         if partition.method == "centralized":
             net_dataidx_map = centralized_partition(all_targets)
