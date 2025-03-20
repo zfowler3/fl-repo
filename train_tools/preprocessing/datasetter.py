@@ -101,7 +101,7 @@ def data_distributer(
             local_loaders[j]["all_test"] = None
 
 
-    if args.continual:
+    if continual:
         # cifar10/cifar100 added noise experiments have different setup than medical experiments, where each client == 1 patient in medical
         if dataset_name == 'CIFAR-10-C':
             net_dataidx_map = data_distribution_cifar10c(all_targets, n_clients, partition.alpha, num_classes, partition.method)
@@ -133,14 +133,22 @@ def data_distributer(
     print(save_folder)
 
     for client_idx, dataidxs in net_dataidx_map.items():
-        if dataset_name == 'CIFAR-10-C':
-            for j in range(len(dataidxs)):
-                cur_idxs = dataidxs[j]
-                local_loaders[client_idx][j]["datasize"] = len(cur_idxs)
-                local_loaders[client_idx][j]["train"] = DATA_LOADERS[dataset_name](
-                    root, mode='tr', batch_size=batch_size, dataidxs=cur_idxs, dataset_label=dataset_name,
-                    shift_type=shift_type
+        if continual:
+            if dataset_name == 'CIFAR-10-C':
+                for j in range(len(dataidxs)):
+                    cur_idxs = dataidxs[j]
+                    local_loaders[client_idx][j]["datasize"] = len(cur_idxs)
+                    local_loaders[client_idx][j]["train"] = DATA_LOADERS[dataset_name](
+                        root, mode='tr', batch_size=batch_size, dataidxs=cur_idxs, dataset_label=dataset_name,
+                        shift_type=shift_type
                 )
+            else:
+                for j in range(len(dataidxs)):
+                    cur_idxs = dataidxs[j]
+                    local_loaders[client_idx][j]["datasize"] = len(cur_idxs)
+                    local_loaders[client_idx][j]["train"] = DATA_LOADERS[dataset_name](
+                        root, mode='tr', batch_size=batch_size, dataidxs=cur_idxs, dataset_label=dataset_name,
+                    )
         else:
             local_loaders[client_idx]["datasize"] = len(dataidxs)
             local_loaders[client_idx]["train"] = DATA_LOADERS[dataset_name](
@@ -151,17 +159,25 @@ def data_distributer(
         print(">>> Distributing client test data...")
         for client_idx, dataidxs in net_dataidx_map_test.items():
             # Note: Must train mode if not wanting to use train set (here: local client test set is made from local client data)
-            if dataset_name == 'CIFAR-10-C':
-                all_test = []
-                for j in range(len(dataidxs)):
-                    cur_visit_idxs = dataidxs[j]
-                    local_loaders[client_idx][j]["test_size"] = len(cur_visit_idxs)
-                    local_loaders[client_idx][j]["test"] = DATA_LOADERS[dataset_name](
-                        root, mode='tr', batch_size=batch_size, dataidxs=cur_visit_idxs, dataset_label=dataset_name,
-                        shift_type=shift_type
-                    )
-                    all_test.append(local_loaders[client_idx][j]["test"])
-                local_loaders[client_idx]["all_test"] = all_test
+            if continual:
+                if dataset_name == 'CIFAR-10-C':
+                    all_test = []
+                    for j in range(len(dataidxs)):
+                        cur_visit_idxs = dataidxs[j]
+                        local_loaders[client_idx][j]["test_size"] = len(cur_visit_idxs)
+                        local_loaders[client_idx][j]["test"] = DATA_LOADERS[dataset_name](
+                            root, mode='tr', batch_size=batch_size, dataidxs=cur_visit_idxs, dataset_label=dataset_name,
+                            shift_type=shift_type
+                        )
+                        all_test.append(local_loaders[client_idx][j]["test"])
+                    local_loaders[client_idx]["all_test"] = all_test
+                else:
+                    for j in range(len(dataidxs)):
+                        cur_visit_idxs = dataidxs[j]
+                        local_loaders[client_idx][j]["test_size"] = len(cur_visit_idxs)
+                        local_loaders[client_idx][j]["test"] = DATA_LOADERS[dataset_name](
+                            root, mode='tr', batch_size=batch_size, dataidxs=cur_visit_idxs, dataset_label=dataset_name,
+                        )
             else:
                 local_testloader = DATA_LOADERS[dataset_name](
                     root, mode='tr', batch_size=batch_size, dataidxs=dataidxs, dataset_label=dataset_name
