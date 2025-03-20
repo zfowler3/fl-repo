@@ -173,6 +173,9 @@ def data_distributer(
 
     return data_distributed
 
+def patient_partition(n_clients):
+    return
+
 
 def centralized_partition(all_targets):
     labels = all_targets
