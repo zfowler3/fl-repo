@@ -71,7 +71,7 @@ def _get_setups(args):
 
     # Distribute the data to clients
     # Returns dictionary with global and local loaders
-    data_distributed = data_distributer(root=args.data_setups.root, dataset_name=args.data_setups.dataset_name,
+    data_distributed = data_distributer(args, root=args.data_setups.root, dataset_name=args.data_setups.dataset_name,
                                         batch_size=args.data_setups.batch_size, n_clients=args.data_setups.n_clients,
                                         partition=args.data_setups.partition, save_folder=train_test_folder,
                                         shift_type=shift_type)
@@ -154,6 +154,7 @@ parser.add_argument("--root_path", default="/home/zoe/GhassanGT Dropbox/Zoe Fowl
 parser.add_argument("--date", type=str)
 parser.add_argument("--shift", type=str)
 parser.add_argument("--resume", action='store_true')
+parser.add_argument("--continual", action='store_true')
 parser.add_argument("--root", default="./data", type=str)
 parser.add_argument("--class_comp", type=int)
 parser.add_argument("--base_folder", default="/home/zoe/GhassanGT Dropbox/Zoe Fowler/Zoe/InSync/BIGandDATA/Federated_Learning/", type=str)

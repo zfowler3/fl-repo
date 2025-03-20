@@ -10,7 +10,7 @@ from .mnist.loader import get_all_targets_mnist, get_dataloader_mnist
 from .cifar10.loader import get_all_targets_cifar10, get_dataloader_cifar10
 from .cifar100.loader import get_all_targets_cifar100, get_dataloader_cifar100
 from .cinic10.loader import get_all_targets_cinic10, get_dataloader_cinic10
-from .olives.loader import get_patient_ids_by_visit
+from .olives.loader import get_patient_ids_by_visit, get_all_targets_olives
 from .tinyimagenet.loader import (
     get_all_targets_tinyimagenet,
     get_dataloader_tinyimagenet,
@@ -30,7 +30,8 @@ DATA_INSTANCES = {
     "TissueMNIST": get_all_targets_medmnist,
     "OrganSMNIST": get_all_targets_medmnist,
     "CIFAR-10-C": get_all_targets_cifar10c,
-    "fashion": get_all_targets_fashion
+    "fashion": get_all_targets_fashion,
+    "olives": get_all_targets_olives
 }
 
 DATA_LOADERS = {
@@ -51,6 +52,7 @@ DATA_LOADERS = {
 
 
 def data_distributer(
+    args,
     root,
     dataset_name,
     batch_size,
@@ -77,9 +79,11 @@ def data_distributer(
     num_classes = len(np.unique(all_targets))
     print('Class count: ', num_classes)
 
-    net_dataidx_map_test = None
+    # continual learning param
+    continual = args.continual
 
-    if dataset_name != 'CIFAR-10-C':
+    if not continual:
+        # Regular FL; no continual learning
         local_loaders = {
             i: {"datasize": 0, "train": None, "test": None, "test_size": 0} for i in range(n_clients)
         }
@@ -87,14 +91,11 @@ def data_distributer(
         local_loaders = {
             i: {} for i in range(n_clients)
         }
-        # TODO: Cifar10c setup can be modified. Local loaders holds the data (train/test) for each client. In
-        #  Federated Continual Learning, data across each client will shift over time. This will need to be accounted
-        #  for here. Right now, I have set it up in a way such that each client has a separate train/test dictionary per
-        #  noise level in the cifar10c dataset.
-        noise_levels = 5
+        # Parameter to control the 'level'; can correspond to how many noise levels we have or anything else.
+        levels = args.data_setups.local_setups.levels
         for j in range(n_clients):
             local_loaders[j] = {
-                i: {"datasize": 0, "train": None, "test": None, "test_size": 0} for i in range(noise_levels)
+                i: {"datasize": 0, "train": None, "test": None, "test_size": 0} for i in range(levels)
             }
             local_loaders[j]["all_test"] = None
 
@@ -223,6 +224,26 @@ def patient_partition_continual(root, n_clients, dataset, max_val):
 
     return net_dataidx_map
 
+def create_local_patients_continual(idxs, amount=10):
+    '''Function to create local train and test sets for continual learning (medical)'''
+    net_dataidx_test = {}
+    for i in range(len(idxs)):
+        current_client_idxs = idxs[i]
+        test = {}
+        tr = {}
+        # SAME TEST PARTITION USED ACROSS DIFFERENT VISITS
+        cur_idxs = current_client_idxs[0]
+        test_idxs = np.random.choice(current_client_idxs, amount, replace=False)
+        idxs_by_place = np.where(np.isin(cur_idxs, test_idxs))[0] # Gets 'index' location within the array
+        idxs_by_place_invert = np.where(np.isin(cur_idxs, test_idxs, invert=True))[0] # Just invert operation to get train idxs
+        for j in range(len(current_client_idxs)):
+            test[j] = current_client_idxs[j][idxs_by_place].astype(int)
+            tr[j] = current_client_idxs[j][idxs_by_place_invert].astype(int)
+        # update train, test dictionaries with proper indices
+        idxs[i] = tr
+        net_dataidx_test[i] = test
+
+    return net_dataidx_test, idxs
 
 def centralized_partition(all_targets):
     labels = all_targets
