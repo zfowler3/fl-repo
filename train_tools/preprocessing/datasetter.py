@@ -1,5 +1,8 @@
 import numpy as np
 import os
+
+import pandas as pd
+
 from .cifar10c.loader import get_all_targets_cifar10c, get_dataloader_cifar10c
 from .fashion.loader import get_all_targets_fashion, get_dataloader_fashion
 from .medmnist.loader import get_dataloader_medmnist, get_all_targets_medmnist
@@ -7,6 +10,7 @@ from .mnist.loader import get_all_targets_mnist, get_dataloader_mnist
 from .cifar10.loader import get_all_targets_cifar10, get_dataloader_cifar10
 from .cifar100.loader import get_all_targets_cifar100, get_dataloader_cifar100
 from .cinic10.loader import get_all_targets_cinic10, get_dataloader_cinic10
+from .olives.loader import get_patient_ids_by_visit
 from .tinyimagenet.loader import (
     get_all_targets_tinyimagenet,
     get_dataloader_tinyimagenet,
@@ -173,8 +177,51 @@ def data_distributer(
 
     return data_distributed
 
-def patient_partition(n_clients):
-    return
+def patient_partition(root, n_clients, dataset, max_val):
+    # Setting clients equal to patient ID. Regular case (not continual learning).
+
+    # Ideally can handle other medical datasets with patient / visit information.
+    if dataset == 'olives':
+        ids, targets = get_patient_ids_by_visit(spreadsheet_root=root, max_val=max_val)
+        sheet = pd.read_csv(root + 'prime_trex_compressed.csv')
+
+    # Choose N random patients from 'ids'
+    client_ids = np.random.choice(ids, n_clients, replace=False)
+    # Set client data. In this case it's corresponding indices from a spreadsheet
+    net_dataidx_map = {}
+    for client_idx in range(n_clients):
+        cur_id = client_ids[client_idx]
+        subsheet = sheet[sheet['Patient_ID'] == cur_id]
+        inds = subsheet['Ind'].to_numpy()
+        net_dataidx_map[client_idx] = inds
+
+    return net_dataidx_map
+
+def patient_partition_continual(root, n_clients, dataset, max_val):
+    # Setting clients equal to patient ID. Adapted for continual learning.
+
+    # Ideally can handle other medical datasets with patient / visit information.
+    if dataset == 'olives':
+        ids, targets = get_patient_ids_by_visit(spreadsheet_root=root, max_val=max_val)
+        sheet = pd.read_csv(root + 'prime_trex_compressed.csv')
+
+    # Choose N random patients from 'ids'
+    client_ids = np.random.choice(ids, n_clients, replace=False)
+    net_dataidx_map = {}
+    for client_idx in range(n_clients):
+        visit_data = {}
+        cur_id = client_ids[client_idx]
+        subsheet = sheet[sheet['Patient_ID'] == cur_id].reset_index().iloc[:, 1:]
+        visits = np.unique(subsheet['Visit'].to_numpy())
+        for i in range(len(visits)):
+            cur_visit = visits[i]
+            inds_for_visit = (subsheet[subsheet['Visit'] == cur_visit])['Ind'].to_numpy()
+            visit_data[i] = inds_for_visit
+
+        # Each client's data is another dictionary. Format looks like net_dataidx = {0: {0: [..], 1: [..], ..}}
+        net_dataidx_map[client_idx] = visit_data
+
+    return net_dataidx_map
 
 
 def centralized_partition(all_targets):

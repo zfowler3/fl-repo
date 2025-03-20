@@ -27,10 +27,14 @@ def get_patient_ids_by_visit(spreadsheet_root, max_val, mode='tr'):
     ids = sheet['Patient_ID'].to_numpy()
     unique_ids = np.unique(ids)
     new_ids = []
+    labels = []
     for i in unique_ids:
-        subsheet = sheet[sheet['Patient_ID'] == i]
+        subsheet = sheet[sheet['Patient_ID'] == i].reset_index().iloc[:, 1:]
         max_visit = subsheet['Visit'].max()
+        lab = subsheet['Label'].iloc[0]
         # if patient has at least 'max_val' number of visits, include it
-        if max_visit >= max_val:
+        if max_visit > max_val:
             new_ids.append(i)
-    return np.array(new_ids)
+            labels.append(lab)
+
+    return np.array(new_ids), np.array(labels)
