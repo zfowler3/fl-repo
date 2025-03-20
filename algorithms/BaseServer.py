@@ -47,7 +47,8 @@ class BaseServer:
         self.global_testloader = data_distributed["global"]["test"]
 
         self.criterion = nn.CrossEntropyLoss()
-        self.multilabel = False
+        self.multilabel = algo_params['multilabel']
+        self.continual = algo_params['continual']
 
         self.data_distributed = data_distributed
         self.optimizer = optimizer
@@ -59,10 +60,10 @@ class BaseServer:
 
         self.save_classwise = {}
 
-        if self.dataset == 'CIFAR-10-C':
-            self.shift = 5
-        else:
-            self.shift = None
+        # if self.continual:
+        #     self.shift = 5
+        # else:
+        #     self.shift = None
 
         self.save_folder = save_folder
 
@@ -92,7 +93,7 @@ class BaseServer:
             self.client_history = {}
             self.classwise = None
 
-            if self.shift is not None:
+            if self.continual is not None:
                 self.sampled_acc = {
                     i: {} for i in range(self.n_clients)
                 }
@@ -291,7 +292,7 @@ class BaseServer:
         # get global model performance on global test set
         new_acc, forgets_glob, nfr_glob, glob_test_acc, pos, unchanged = model_metrics_glob(self.model, dataloader=self.global_testloader,
                                                                        previous_acc=self.global_on_global,
-                                                                       dataset=self.dataset)
+                                                                       multilabel=self.multilabel)
         if self.multilabel:
             classwise_glob = np.mean(glob_test_acc['class'])
             glob_test_ = glob_test_acc['macro']
@@ -306,7 +307,7 @@ class BaseServer:
         print('Test Global Model on All Clients')
         backward_transfer = []
         for client in range(self.n_clients):
-            if self.shift is not None:
+            if self.continual:
                 for noise in range(round_idx):
                     current_loader = self.local_testloaders[client][noise]["test"]
                     try:
@@ -318,7 +319,7 @@ class BaseServer:
                     p, cur_forgets, cur_nfr, cur_acc, cur_pos, cur_un = model_metrics_glob(model=self.model,
                                                                                             dataloader=current_loader,
                                                                                             previous_acc=prev_loc_acc,
-                                                                                            dataset=self.dataset)
+                                                                                            multilabel=self.multilabel)
                     _, classwise_local, _ = evaluate_model_classwise(model=self.model, dataloader=current_loader,
                                                                   num_classes=self.num_classes, device=self.device)
                     # Update latest SAVED ACCURACY on client - this is for ALL available clients
@@ -360,7 +361,7 @@ class BaseServer:
                 p, cur_forgets, cur_nfr, cur_acc_, cur_pos, cur_un = model_metrics_glob(model=self.model,
                                                                                         dataloader=current_loader,
                                                                                         previous_acc=prev_loc_acc,
-                                                                                        dataset=self.dataset)
+                                                                                        multilabel=self.multilabel)
                 if self.multilabel:
                     cur_acc = cur_acc_['macro']
                     classwise_local = np.mean(cur_acc_['class'])

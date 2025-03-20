@@ -18,7 +18,10 @@
     "train_setups":{
         "algo": {
             "name": "fedavg",
-            "params": {}
+            "params": {
+                "multilabel": false,
+                "continual": false
+            }
         },
         "scenario": {
             "n_rounds": 100,

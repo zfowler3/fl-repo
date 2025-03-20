@@ -29,7 +29,7 @@ class BaseClientTrainer:
 
         self.dataset = dataset
         self.criterion = nn.CrossEntropyLoss()
-        self.multilabel = False
+        self.multilabel = algo_params['multilabel']
 
         self.local_epochs = local_epochs
         self.device = device
@@ -77,8 +77,18 @@ class BaseClientTrainer:
 
                 # forward pass
                 if self.dataset == 'olives':
-                    targets = targets.float()
-                data, targets = data.to(self.device), targets.to(self.device)
+                    if self.multilabel:
+                        targets = targets.float()
+                        targets = targets.to(self.device)
+                    else:
+                        # binary classification (dr/dme)
+                        one_hot = torch.zeros(targets.shape[0], self.num_classes)
+                        one_hot[range(targets.shape[0]), targets.long()] = 1  # for binary
+                        targets = one_hot.to(self.device)
+                else:
+                    targets = targets.to(self.device)
+
+                data = data.to(self.device)
                 output = self.model(data)
                 loss = self.criterion(output, targets)
 
@@ -96,12 +106,12 @@ class BaseClientTrainer:
         # local results train accuracy is training accuracy / f1 score for each individual client
         if self.multilabel:
             l = evaluate_model(
-                self.model, self.trainloader, self.dataset, self.device
+                self.model, self.trainloader, self.multilabel, self.device
             )
             local_results["train_acc"] = l['macro']
         else:
             local_results["train_acc"] = evaluate_model(
-                self.model, self.trainloader, self.dataset, self.device
+                self.model, self.trainloader, self.multilabel, self.device
             )
         # Set up forgetting counters
         # Local test sets
@@ -131,7 +141,7 @@ class BaseClientTrainer:
 
         # Eval trained model (on the current client) on the global test set
         new_glob, forgets_glob, nfr_glob, global_acc = model_metrics(self.model, self.global_testloader,
-                                                     previous_acc=previous_global_acc, dataset=self.dataset)
+                                                     previous_acc=previous_global_acc, multilabel=self.multilabel)
         if self.multilabel:
             local_on_glob_classwise = np.mean(global_acc['class'])
             glob_acc = global_acc['macro']
@@ -156,7 +166,7 @@ class BaseClientTrainer:
                 # Eval trained model (on the current client) on the local client test set
                 new, forgets_local, nfr_local, local_acc = model_metrics(self.model, current_test_loader,
                                                                          previous_acc=prev_acc,
-                                                                         dataset=self.dataset)
+                                                                         multilabel=self.multilabel)
                 self.prev_acc[current_client][noise] = new.astype(int) # Record new acc for this test set
                 local_results['Trained on'] = self.shift
                 local_results["local on local nfr on noise " + str(noise)] = nfr_local
@@ -179,7 +189,7 @@ class BaseClientTrainer:
         else:
             new, forgets_local, nfr_local, local_acc = model_metrics(self.model, self.local_testloader,
                                                                      previous_acc=previous_client_acc,
-                                                                     dataset=self.dataset)
+                                                                     multilabel=self.multilabel)
             if self.multilabel:
                 loc_on_loc_classwise = np.mean(local_acc['class'])
                 ll = loc_on_loc_classwise

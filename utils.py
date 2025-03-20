@@ -125,6 +125,12 @@ def config_overwriter(opt, args):
     if args.beta is not None:
         opt.train_setups.algo.params.beta = args.beta
 
+    if args.multilabel is not None:
+        opt.train_setups.algo.params.multilabel = args.multilabel
+
+    if args.continual is not None:
+        opt.train_setups.algo.params.continual = args.continual
+
     opt.class_comp = args.class_comp
 
     return opt
