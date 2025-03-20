@@ -47,6 +47,8 @@ class BaseClientTrainer:
         self.params_type = None
         self.layer_generator_dict = {}
 
+        self.nrounds = None
+
         # for continual learning eval
         self.all_test = None
         self.shift = None
@@ -125,7 +127,7 @@ class BaseClientTrainer:
                     previous_client_acc = np.zeros(shape=self.testsize)
             else:
                 previous_client_acc = {
-                    i: np.zeros(shape=self.testsize) for i in range(5)
+                    i: np.zeros(shape=self.testsize) for i in range(self.nrounds)
                 }
                 self.prev_acc[current_client] = {}
                 self.prev_acc[current_client] = previous_client_acc

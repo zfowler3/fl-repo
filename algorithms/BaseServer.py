@@ -200,15 +200,15 @@ class BaseServer:
 
         return sampled_clients
 
-    def _set_client_data(self, client_idx, noise=0):
+    def _set_client_data(self, client_idx, continual_level=0):
         """Assign local client datasets."""
         if self.dataset == 'CIFAR-10-C':
-            self.client.datasize = self.data_distributed["local"][client_idx][noise]["datasize"]
-            self.client.trainloader = self.data_distributed["local"][client_idx][noise]["train"]
-            self.client.local_testloader = self.data_distributed["local"][client_idx][noise]["test"]
+            self.client.datasize = self.data_distributed["local"][client_idx][continual_level]["datasize"]
+            self.client.trainloader = self.data_distributed["local"][client_idx][continual_level]["train"]
+            self.client.local_testloader = self.data_distributed["local"][client_idx][continual_level]["test"]
             self.client.all_test = self.data_distributed["local"][client_idx]["all_test"]
-            self.client.testsize = self.data_distributed["local"][client_idx][noise]["test_size"]
-            self.client.shift = noise
+            self.client.testsize = self.data_distributed["local"][client_idx][continual_level]["test_size"]
+            self.client.shift = continual_level
         else:
             self.client.datasize = self.data_distributed["local"][client_idx]["datasize"]
             self.client.trainloader = self.data_distributed["local"][client_idx]["train"]
@@ -217,6 +217,8 @@ class BaseServer:
 
         self.client.global_testloader = self.data_distributed["global"]["test"]
         self.client.global_test_size = self.data_distributed["global"]["test_size"]
+
+        self.client.nrounds = self.n_rounds
 
         self.client.current_client = client_idx
 
