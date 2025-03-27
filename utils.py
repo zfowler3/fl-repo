@@ -65,6 +65,9 @@ def config_overwriter(opt, args):
     if args.date is not None:
         opt.data_setups.date = args.date
 
+    if args.spreadsheet_path is not None:
+        opt.spreadsheet_path = args.spreadsheet_path
+
     if args.root is not None:
         opt.data_setups.root = args.root
 

@@ -8,12 +8,11 @@ def get_patient_id(spreadsheet_root, mode='tr'):
     '''
     Returns unique patient IDs in given train/test split
     '''
-    spreadsheet_root = spreadsheet_root + '/spreadsheets/'
     if mode == 'tr':
-        sheet = pd.read_csv(spreadsheet_root + 'prime_trex_compressed.csv')
+        sheet = pd.read_csv(spreadsheet_root + '/prime_trex_compressed.csv')
     else:
-        sheet = pd.read_csv(spreadsheet_root + 'prime_trex_compressed_new.csv')
-    ids = sheet['Patient_ID'].to_numpy()
+        sheet = pd.read_csv(spreadsheet_root + '/prime_trex_test_new.csv')
+    ids = sheet['Eye_ID'].to_numpy()
 
     return np.unique(ids)
 
@@ -22,17 +21,16 @@ def get_patient_ids_by_visit(spreadsheet_root, max_val, mode='tr'):
     Returns unique patient IDs in given train/test split, where only patients have
     certain #s of visits are considered (max_val)
     '''
-    spreadsheet_root = spreadsheet_root + '/spreadsheets/'
     if mode == 'tr':
-        sheet = pd.read_csv(spreadsheet_root + 'prime_trex_compressed.csv')
+        sheet = pd.read_csv(spreadsheet_root + '/prime_trex_compressed.csv')
     else:
-        sheet = pd.read_csv(spreadsheet_root + 'prime_trex_compressed_new.csv')
-    ids = sheet['Patient_ID'].to_numpy()
+        sheet = pd.read_csv(spreadsheet_root + '/prime_trex_test_new.csv')
+    ids = sheet['Eye_ID'].to_numpy()
     unique_ids = np.unique(ids)
     new_ids = []
     labels = []
     for i in unique_ids:
-        subsheet = sheet[sheet['Patient_ID'] == i].reset_index().iloc[:, 1:]
+        subsheet = sheet[sheet['Eye_ID'] == i].reset_index().iloc[:, 1:]
         max_visit = subsheet['Visit'].max()
         lab = subsheet['Label'].iloc[0]
         # if patient has at least 'max_val' number of visits, include it
@@ -65,7 +63,7 @@ def _data_transforms():
             transforms.Normalize(mean, std)
         ])
     }
-    return data_transforms
+    return data_transforms['train'], data_transforms['test']
 
 def get_dataloader_olives(root, batch_size=50, dataidxs=None, dataset_label=None, mode='tr'):
     # Dataloaders for olives DR vs DME detection

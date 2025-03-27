@@ -202,7 +202,7 @@ class BaseServer:
 
     def _set_client_data(self, client_idx, continual_level=0):
         """Assign local client datasets."""
-        if self.dataset == 'CIFAR-10-C':
+        if self.continual:
             self.client.datasize = self.data_distributed["local"][client_idx][continual_level]["datasize"]
             self.client.trainloader = self.data_distributed["local"][client_idx][continual_level]["train"]
             self.client.local_testloader = self.data_distributed["local"][client_idx][continual_level]["test"]

@@ -160,24 +160,24 @@ class BaseClientTrainer:
             local_results['Sampled Client'] = current_client
             # Evaluate current model on all levels of data shift we have seen so far
             classwise = []
-            for noise in range(self.shift+1):
+            for level in range(self.shift+1):
                 # get corresponding test set
-                current_test_loader = self.all_test[noise]
+                current_test_loader = self.all_test[level]
                 # get previous acc for this test set
-                prev_acc = previous_client_acc[noise]
+                prev_acc = previous_client_acc[level]
                 # Eval trained model (on the current client) on the local client test set
                 new, forgets_local, nfr_local, local_acc = model_metrics(self.model, current_test_loader,
                                                                          previous_acc=prev_acc,
                                                                          multilabel=self.multilabel)
-                self.prev_acc[current_client][noise] = new.astype(int) # Record new acc for this test set
+                self.prev_acc[current_client][level] = new.astype(int) # Record new acc for this test set
                 local_results['Trained on'] = self.shift
-                local_results["local on local nfr on noise " + str(noise)] = nfr_local
-                local_results["local on local test acc on noise " + str(noise)] = local_acc
+                local_results["local on local nfr on lvl " + str(level)] = nfr_local
+                local_results["local on local test acc on lvl " + str(level)] = local_acc
                 # classwise eval
                 _, loc_on_loc_classwise, ll = evaluate_model_classwise(model=self.model, dataloader=current_test_loader,
                                                                    num_classes=self.num_classes, device=self.device)
-                local_results["local on local classwise on noise " + str(noise)] = loc_on_loc_classwise
-                local_results["local on local classwise tot on noise " + str(noise)] = ll
+                local_results["local on local classwise on lvl " + str(level)] = loc_on_loc_classwise
+                local_results["local on local classwise tot on lvl " + str(level)] = ll
                 classwise.append(ll)
 
             local_results['local on local classwise tot'] = np.mean(np.array(classwise))

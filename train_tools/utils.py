@@ -29,7 +29,8 @@ NUM_CLASSES = {
     "OrganSMNIST": 11,
     "OCTMNIST": 4,
     "TissueMNIST": 8,
-    "fashion": 10
+    "fashion": 10,
+    "olives": 2
 }
 
 
@@ -46,6 +47,8 @@ def create_models(model_name, dataset_name):
     elif dataset_name == 'TissueMNIST':
         ch = 1
     elif dataset_name == 'OCTMNIST':
+        ch = 1
+    elif dataset_name == 'olives':
         ch = 1
     elif dataset_name == 'mnist':
         ch = 1

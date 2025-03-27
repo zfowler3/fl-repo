@@ -5,22 +5,22 @@ import pandas as pd
 import cv2 as cv
 
 class Olives_DiseaseDetection(data.Dataset):
-    def __init__(self, root='/home/zoe/FedNTD/spreadsheets/', transforms=None,
-                 dataidxs=None, mode='tr'):
+    def __init__(self, root='img_directory/', transforms=None,
+                 dataidxs=None, mode='tr', spreadsheet_root='/home/zoe/olives'):
         self.img_dir = root
         self.transform = transforms
         # read spreadsheet
-        rroot = root + '/spreadsheets/'
+        rroot = spreadsheet_root
         if mode == 'tr':
-            rroot = rroot + 'prime_trex_compressed.csv'
+            rroot = rroot + '/prime_trex_compressed.csv'
         else:
-            rroot = rroot + 'prime_trex_compressed_new.csv'
+            rroot = rroot + '/prime_trex_test_new.csv'
         self.x = pd.read_csv(rroot)
         self.targets = self.x['Label'].to_numpy()
 
         if dataidxs is not None:
             self.x = self.x.iloc[dataidxs].reset_index().iloc[:, 1:]
-            self.targets = self.targets.iloc[dataidxs].reset_index().iloc[:, 1:]
+            self.targets = self.targets[dataidxs]
 
     def __len__(self):
         return len(self.x)

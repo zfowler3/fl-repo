@@ -69,6 +69,9 @@ def data_distributer(
         root = os.path.join(root, 'CINIC-10')
     elif dataset_name == 'tinyimagenet':
         root = os.path.join(root, 'tiny-imagenet-200')
+    elif dataset_name == 'olives':
+        data_root = root
+        sp_root = args.spreadsheet_path
     elif dataset_name != 'CIFAR-10-C':
         root = os.path.join(root, dataset_name.lower())
     else:
@@ -81,7 +84,7 @@ def data_distributer(
     print('Class count: ', num_classes)
 
     # continual learning param
-    continual = args.continual
+    continual = args.train_setups.algo.params.continual
 
     if not continual:
         # Regular FL; no continual learning
@@ -93,7 +96,8 @@ def data_distributer(
             i: {} for i in range(n_clients)
         }
         # Parameter to control the 'level'; can correspond to how many noise levels we have or anything else.
-        levels = args.data_setups.local_setups.levels
+        #levels = args.data_setups.local_setups.levels
+        levels = args.train_setups.scenario.n_rounds
         for j in range(n_clients):
             local_loaders[j] = {
                 i: {"datasize": 0, "train": None, "test": None, "test_size": 0} for i in range(levels)
@@ -111,7 +115,7 @@ def data_distributer(
                                                                                   save_folder=save_folder)
         else:
             # Medical Data Partition for Continual Setup
-            net_dataidx_map = patient_partition_continual(root, n_clients, dataset_name, levels)
+            net_dataidx_map = patient_partition_continual(sp_root, n_clients, dataset_name, levels)
             #'Amount' determines amount of local test samples allotted to each 'patient'
             net_dataidx_map_test, net_dataidx_map = create_local_patients_continual(net_dataidx_map, amount=10)
     else:
@@ -143,11 +147,11 @@ def data_distributer(
                         shift_type=shift_type
                 )
             else:
-                for j in range(len(dataidxs)):
+                for j in range(levels):
                     cur_idxs = dataidxs[j]
                     local_loaders[client_idx][j]["datasize"] = len(cur_idxs)
                     local_loaders[client_idx][j]["train"] = DATA_LOADERS[dataset_name](
-                        root, mode='tr', batch_size=batch_size, dataidxs=cur_idxs, dataset_label=dataset_name,
+                        data_root, mode='tr', batch_size=batch_size, dataidxs=cur_idxs, dataset_label=dataset_name,
                     )
         else:
             local_loaders[client_idx]["datasize"] = len(dataidxs)
@@ -172,12 +176,15 @@ def data_distributer(
                         all_test.append(local_loaders[client_idx][j]["test"])
                     local_loaders[client_idx]["all_test"] = all_test
                 else:
-                    for j in range(len(dataidxs)):
+                    all_test = []
+                    for j in range(levels):
                         cur_visit_idxs = dataidxs[j]
                         local_loaders[client_idx][j]["test_size"] = len(cur_visit_idxs)
                         local_loaders[client_idx][j]["test"] = DATA_LOADERS[dataset_name](
-                            root, mode='tr', batch_size=batch_size, dataidxs=cur_visit_idxs, dataset_label=dataset_name,
+                            data_root, mode='tr', batch_size=batch_size, dataidxs=cur_visit_idxs, dataset_label=dataset_name,
                         )
+                        all_test.append(local_loaders[client_idx][j]["test"])
+                    local_loaders[client_idx]["all_test"] = all_test
             else:
                 local_testloader = DATA_LOADERS[dataset_name](
                     root, mode='tr', batch_size=batch_size, dataidxs=dataidxs, dataset_label=dataset_name
@@ -188,7 +195,12 @@ def data_distributer(
     ################################################################################################################
     # Global Dataloader (For testing generalization)
     ###############################################################################################################
-    test_global_loader = DATA_LOADERS[dataset_name](root, mode='te', batch_size=batch_size, dataset_label=dataset_name)
+    if dataset_name == 'olives':
+        test_global_loader = DATA_LOADERS[dataset_name](data_root, mode='te', batch_size=batch_size,
+                                                        dataset_label=dataset_name)
+    else:
+        test_global_loader = DATA_LOADERS[dataset_name](root, mode='te', batch_size=batch_size,
+                                                        dataset_label=dataset_name)
     global_loaders = {
         "test": test_global_loader,
         "test_size": int(len(test_global_loader)*batch_size)
@@ -208,7 +220,7 @@ def patient_partition(root, n_clients, dataset, max_val):
     # Ideally can handle other medical datasets with patient / visit information.
     if dataset == 'olives':
         ids, targets = get_patient_ids_by_visit(spreadsheet_root=root, max_val=max_val)
-        sheet = pd.read_csv(root + 'prime_trex_compressed.csv')
+        sheet = pd.read_csv(root + '/prime_trex_compressed.csv')
 
     # Choose N random patients from 'ids'
     client_ids = np.random.choice(ids, n_clients, replace=False)
@@ -227,16 +239,20 @@ def patient_partition_continual(root, n_clients, dataset, max_val):
 
     # Ideally can handle other medical datasets with patient / visit information.
     if dataset == 'olives':
+        col = 'Eye_ID'
         ids, targets = get_patient_ids_by_visit(spreadsheet_root=root, max_val=max_val)
-        sheet = pd.read_csv(root + 'prime_trex_compressed.csv')
+        sheet = pd.read_csv(root + '/prime_trex_compressed.csv')
+    else:
+        col = 'Patient_ID'
 
     # Choose N random patients from 'ids'
     client_ids = np.random.choice(ids, n_clients, replace=False)
+    #print('IDS: ', client_ids)
     net_dataidx_map = {}
     for client_idx in range(n_clients):
         visit_data = {}
         cur_id = client_ids[client_idx]
-        subsheet = sheet[sheet['Patient_ID'] == cur_id].reset_index().iloc[:, 1:]
+        subsheet = sheet[sheet[col] == cur_id].reset_index().iloc[:, 1:]
         visits = np.unique(subsheet['Visit'].to_numpy())
         for i in range(len(visits)):
             cur_visit = visits[i]
@@ -257,8 +273,9 @@ def create_local_patients_continual(idxs, amount=10):
         tr = {}
         # SAME TEST PARTITION USED ACROSS DIFFERENT VISITS
         cur_idxs = current_client_idxs[0]
-        test_idxs = np.random.choice(current_client_idxs, amount, replace=False)
+        test_idxs = np.random.choice(cur_idxs, amount, replace=False)
         idxs_by_place = np.where(np.isin(cur_idxs, test_idxs))[0] # Gets 'index' location within the array
+        print(idxs_by_place)
         idxs_by_place_invert = np.where(np.isin(cur_idxs, test_idxs, invert=True))[0] # Just invert operation to get train idxs
         for j in range(len(current_client_idxs)):
             test[j] = current_client_idxs[j][idxs_by_place].astype(int)

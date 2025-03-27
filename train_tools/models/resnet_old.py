@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import resnet18 as r18
@@ -119,15 +120,17 @@ def resnet10(num_classes=10, in_channels=3):
 
 
 def resnet18(num_classes=10, in_channels=3):
-    # model = r18(weights='IMAGENET1K_V1')
-    # new_layer = nn.Conv2d(in_channels=in_channels,
-    #                       out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
-    # model.conv1 = new_layer
-    # num_ftrs = model.fc.in_features
-    # model.fc = nn.Linear(num_ftrs, num_classes)
-    # model.bn1 = nn.BatchNorm2d(64, track_running_stats=False)
-    # return model
-    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, in_channels=in_channels)
+    model = r18(weights='IMAGENET1K_V1')
+    if in_channels == 1:
+        new_conv1 = nn.Conv2d(1,
+                              out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
+        new_conv1.weight.data = model.conv1.weight.data[:, :1, :, :]
+        model.conv1 = new_conv1
+    num_ftrs = model.fc.in_features
+    model.fc = nn.Linear(num_ftrs, num_classes)
+    #model.bn1 = nn.BatchNorm2d(64, track_running_stats=False)
+    return model
+    #return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, in_channels=in_channels)
 
 
 def resnet34(num_classes=10, in_channels=3):
