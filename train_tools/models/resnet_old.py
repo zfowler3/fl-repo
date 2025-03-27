@@ -128,7 +128,7 @@ def resnet18(num_classes=10, in_channels=3):
         model.conv1 = new_conv1
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, num_classes)
-    #model.bn1 = nn.BatchNorm2d(64, track_running_stats=False)
+    model.bn1 = nn.BatchNorm2d(64, track_running_stats=False)
     return model
     #return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, in_channels=in_channels)
 

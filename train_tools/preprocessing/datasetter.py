@@ -247,7 +247,7 @@ def patient_partition_continual(root, n_clients, dataset, max_val):
 
     # Choose N random patients from 'ids'
     client_ids = np.random.choice(ids, n_clients, replace=False)
-    #print('IDS: ', client_ids)
+    print('IDS: ', client_ids)
     net_dataidx_map = {}
     for client_idx in range(n_clients):
         visit_data = {}
@@ -275,7 +275,7 @@ def create_local_patients_continual(idxs, amount=10):
         cur_idxs = current_client_idxs[0]
         test_idxs = np.random.choice(cur_idxs, amount, replace=False)
         idxs_by_place = np.where(np.isin(cur_idxs, test_idxs))[0] # Gets 'index' location within the array
-        print(idxs_by_place)
+        #print(idxs_by_place)
         idxs_by_place_invert = np.where(np.isin(cur_idxs, test_idxs, invert=True))[0] # Just invert operation to get train idxs
         for j in range(len(current_client_idxs)):
             test[j] = current_client_idxs[j][idxs_by_place].astype(int)
