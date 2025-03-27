@@ -14,6 +14,7 @@ MODELS = {
     "res18": resnet18,
     "res34": resnet34,
     "medmnist": fedavgnet.MedMNISTNet,
+    "olives": fedavgnet.olivesNet
 }
 
 NUM_CLASSES = {

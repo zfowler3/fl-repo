@@ -38,7 +38,7 @@ class olivesNet(torch.nn.Module):
         self.max_pooling = nn.MaxPool2d(2, stride=2)
         self.conv2d_2 = torch.nn.Conv2d(32, 64, kernel_size=5, padding=2)
         self.flatten = nn.Flatten()
-        self.linear_1 = nn.Linear(200704, 512)
+        self.linear_1 = nn.Linear(65536, 512)
         self.classifier = nn.Linear(512, num_classes)
         self.relu = nn.ReLU()
 
