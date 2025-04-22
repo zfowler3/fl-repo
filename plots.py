@@ -44,6 +44,8 @@ def plot_strategies(results_dir='/home/zoe/Dropbox (GhassanGT)/Zoe/InSync/BIGand
     save_path = results_dir + 'Plots/' + dataset + '/' + partition + '/'
     if not os.path.exists(save_path):
         os.makedirs(save_path)
+    # Create dataframe: this function reads in all 'strategies' you provide in the arguments, compiles these results into
+    # one dataframe, where a new column named 'Strategy' corresponds to which strategy the results are from.
     df = df_creation_strategies(results_dir=results_dir, strategies=strategies, partition=partition, sampling_ratio=sampling_ratio,
                                 dataset=dataset, n_clients=n_clients, mapping=mapping, mode=mode)
 
@@ -71,18 +73,25 @@ def plot_strategies(results_dir='/home/zoe/Dropbox (GhassanGT)/Zoe/InSync/BIGand
         'local on global test acc': 'Avg Local Model Performance on Global Test Set (Acc)'
     }
 
+    # Make filename to save the plot output
     save_file = save_path + plotting_col.replace(' ', '_') + '.png'
+    # Set up title and y label
     y = y_labels[plotting_col]
     title=titles[plotting_col] + ' - ' + dataset
 
     palette = sns.color_palette(cc.glasbey, n_colors=len(strategies))
-
+    # Hue = 'Strategy' means it will plot a line for each different FL strategy
+    # Right now, you have just run FedAvg so sns.lineplot on its own will be fine
     ax = sns.lineplot(data=df, x='Round', y=plotting_col, hue='Strategy', palette=palette)
+    # Control size and location of legend
     plt.legend(loc='upper left', prop={'size': 8})
     plt.grid()
+    # Set x and y axis labels
     plt.ylabel(y)
     plt.xlabel('Round')
+    # Change plot title and set font size
     plt.title(title, fontsize=11)
+    # Save figure to save_file location
     plt.savefig(save_file)
     plt.clf()
     return
