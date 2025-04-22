@@ -6,6 +6,10 @@ import os
 import seaborn as sns
 import glob
 
+# TODO: show plots of how global test accuracy on clean global test set (round 0) changes across rounds
+# TODO: show plots of how global test accuracy on global test set from round 1 changes across rounds (provide potential reasoning for increase in writeup)
+# TODO: Pick random local client. Show how its local accuracy evolves on the clean version of the local test set across rounds
+
 def df_creation_strategies(results_dir, strategies=['fedavg','fedcurv','moon','new'], partition='dirichlet_0.1', sampling_ratio='0.5',
                            dataset='cifar10', n_clients='10', mapping=
                            {'fedavg': '07-15-24','fedcurv': '07-15-24','moon': '07-15-24','new': '07-24-24'},
