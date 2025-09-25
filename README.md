@@ -1,3 +1,6 @@
+# Overview and Purpose of Project
+This GitHub project is meant to teach students about federated learning and federated continual learning.
+
 # Install Environment
 You will first need to create a conda environment to run experiments. You can install the basic libraries needed as follows:
 
